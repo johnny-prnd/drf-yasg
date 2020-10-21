@@ -272,6 +272,12 @@ class FieldInspector(BaseInspector):
         assert not isinstance(field, openapi.SwaggerDict), "passed field is already a SwaggerDict object"
         title = force_real_str(field.label) if field.label else None
         title = title if swagger_object_type == openapi.Schema else None  # only Schema has title
+
+        if title and field.field_name and title == field.field_name.replace('_', ' ').capitalize():
+            # swagger_serializer_method decorator 를 적용하지 않은 SerializerMethodField 의 기본 title 제거
+            # 필드명과 title 이 같이 출력되지 않도록 title 값 삭제 (https://d.pr/i/7eUKrB)
+            title = None
+
         help_text = getattr(field, 'help_text', None)
         description = force_real_str(help_text) if help_text else None
         description = description if swagger_object_type != openapi.Items else None  # Items has no description either
@@ -285,8 +291,8 @@ class FieldInspector(BaseInspector):
                 if default not in (None, serializers.empty):
                     instance_kwargs['default'] = default
 
-            if instance_kwargs.get('type', None) != openapi.TYPE_ARRAY:
-                instance_kwargs.setdefault('title', title)
+            # if instance_kwargs.get('type', None) != openapi.TYPE_ARRAY:  # ListField title 이 추가되지 않는 이슈 (https://d.pr/i/6bkpUC)
+            instance_kwargs.setdefault('title', title)
             if description is not None:
                 instance_kwargs.setdefault('description', description)
             if field.allow_null and not instance_kwargs.get('required', False) and not field.required:
