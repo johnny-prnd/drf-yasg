@@ -263,7 +263,7 @@ class FieldInspector(BaseInspector):
         assert swagger_object_type in (openapi.Schema, openapi.Parameter, openapi.Items)
         assert not isinstance(field, openapi.SwaggerDict), "passed field is already a SwaggerDict object"
         title = force_real_str(field.label) if field.label else None
-        title = title if swagger_object_type == openapi.Schema else None  # only Schema has title
+        title = title if swagger_object_type != openapi.Items else None
 
         if title and field.field_name and title == field.field_name.replace('_', ' ').capitalize():
             # swagger_serializer_method decorator 를 적용하지 않은 SerializerMethodField 의 기본 title 제거
@@ -273,6 +273,15 @@ class FieldInspector(BaseInspector):
         help_text = getattr(field, 'help_text', None)
         description = force_real_str(help_text) if help_text else None
         description = description if swagger_object_type != openapi.Items else None  # Items has no description either
+
+        # paramter type 인 경우 field.label(title) 을 description 에 포함하여 출력
+        # InputSerializer 에서 label 만 설정하면 값이 출력되지 않는 이슈 대응
+        if swagger_object_type == openapi.Parameter:
+            if description:
+                description = f'**{title}**\n{description}'
+            else:
+                description = title
+            title = None  # Parameter type 인 경우 title = None 으로 설정하는 기존 구현
 
         def SwaggerType(existing_object=None, use_field_title=True, **instance_kwargs):
             if 'required' not in instance_kwargs and swagger_object_type == openapi.Parameter:
