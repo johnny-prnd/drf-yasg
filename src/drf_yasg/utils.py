@@ -420,17 +420,23 @@ def get_serializer_ref_name(serializer):
     :return: Serializer's ``ref_name`` or ``None`` for inline serializer
     :rtype: str or None
     """
+    import random
+    import string
+
     serializer_meta = getattr(serializer, 'Meta', None)
     serializer_name = type(serializer).__name__
+    serializer_module = type(serializer).__module__
+    random_hash = ''.join([random.choice(string.ascii_lowercase) for i in range(8)])
+
     if hasattr(serializer_meta, 'ref_name'):
         ref_name = serializer_meta.ref_name
     elif serializer_name == 'NestedSerializer' and isinstance(serializer, serializers.ModelSerializer):
         logger.debug("Forcing inline output for ModelSerializer named 'NestedSerializer':\n" + str(serializer))
         ref_name = None
     else:
-        ref_name = serializer_name
-        if ref_name.endswith('Serializer'):
-            ref_name = ref_name[:-len('Serializer')]
+        ref_name = f'{serializer_module}.{serializer_name}'
+        if serializer_name == 'OutputSerializer':
+            ref_name += f'.{random_hash}'
     return ref_name
 
 
