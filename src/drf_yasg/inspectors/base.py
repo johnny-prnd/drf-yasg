@@ -292,8 +292,11 @@ class FieldInspector(BaseInspector):
                 if default not in (None, serializers.empty):
                     instance_kwargs['default'] = default
 
-            # if use_field_title and instance_kwargs.get('type', None) != openapi.TYPE_ARRAY:  # ListField title 이 추가되지 않는 이슈 (https://d.pr/i/6bkpUC)
-            if use_field_title:
+            # if use_field_title and instance_kwargs.get('type', None) != openapi.TYPE_ARRAY:
+            # ListField title 이 추가되지 않는 이슈 (https://d.pr/i/6bkpUC)
+            # drf-yasg/src/drf_yasg/inspectors/field.py:111 에서 use_field_title = False로 설정해서 Serializer title 출력하지 않음
+            # 268 line 에서 무의미한 title은 출력되지 않게 변경해서 instance_kwargs에 title 값 항상 set
+            if instance_kwargs.get('type', None) != openapi.TYPE_ARRAY:
                 instance_kwargs.setdefault('title', title)
             if description is not None:
                 instance_kwargs.setdefault('description', description)
@@ -309,6 +312,12 @@ class FieldInspector(BaseInspector):
                 result = existing_object
             else:
                 result = swagger_object_type(**instance_kwargs)
+
+            # 타이틀 중복출력 이슈 (https://d.pr/i/E7bNEK)
+            # child 로 serializer 를 가지고 있을 때 child title 삭제
+            if isinstance(result.get('items'), openapi.Schema):
+                items = result.get('items')
+                items['title'] = None
 
             # Provide an option to add manual paremeters to a schema
             # for example, to add examples
